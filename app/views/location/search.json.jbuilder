@@ -1,0 +1,1 @@
+json.array! @results, partial: 'location/result', as: :dato

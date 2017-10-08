@@ -7,6 +7,8 @@ require 'pp'
 class LocationController < ApplicationController
   def index
   end
+  def show
+  end
   def search
    	uri = URI.parse("https://maps.googleapis.com/maps/api/geocode/json?address=#{location_params}&key=AIzaSyAiwucziMi6iEJHK5Wyl7TEFpiJQrVdbgo")
   	#uri = URI.parse("https://maps.googleapis.com/maps/api/place/details/json?placeid=ChIJy3Hiyy3hiZYRW6QgSYptxrg&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
@@ -46,9 +48,43 @@ class LocationController < ApplicationController
 
   def recommendByRating
 
+    #Obtener latitud y longitud de una dirección
+    if locationOwner_params[:address]
+      uri = URI.parse("https://maps.googleapis.com/maps/api/geocode/json?address=#{locationOwner_params[:address]}&key=AIzaSyAiwucziMi6iEJHK5Wyl7TEFpiJQrVdbgo")
+
+      request = Net::HTTP::Get.new(uri)
+      request["X-Riot-Token"] = "RGAPI-ade1178e-06bd-48a2-90fc-1b1a5080ad3c"
+
+      req_options = {
+        use_ssl: uri.scheme == "https",
+      }
+
+      response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+        http.request(request)
+      end
+
+
+      if response.code == "200"
+        logger.info("entra")
+        jsonQuery = JSON.parse(response.body)
+        
+        location = jsonQuery['results'][0]['geometry']['location']['lat'].to_s + "," +
+        jsonQuery['results'][0]['geometry']['location']['lng'].to_s
+        
+      else
+        #Hacer un manejo de error para devolver error.
+        render json: response.msg, status: :unprocessable_entity
+      end
+    else
+      location = locationOwner_params[:location]
+    end
+
+
+
     #URL que manda latitud,longitud y tag.
     #Obtener lugares cercanos a un radio definido.
-    uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{locationOwner_params[:location]}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+    uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+    #uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{latitud},#{longitud}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
 
     request = Net::HTTP::Get.new(uri)
     request["X-Riot-Token"] = "RGAPI-ade1178e-06bd-48a2-90fc-1b1a5080ad3c"
@@ -78,7 +114,7 @@ class LocationController < ApplicationController
           
         #El tiempo para entregar un token y validarlo, no es rapido (no menos de 1.5 segundo).
         sleep 1.6
-        uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{locationOwner_params[:location]}&radius=500&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+        uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
 
         request = Net::HTTP::Get.new(uri)
         request["X-Riot-Token"] = "RGAPI-ade1178e-06bd-48a2-90fc-1b1a5080ad3c"
@@ -96,14 +132,20 @@ class LocationController < ApplicationController
           @jsonResult = JSON.parse(response.body)
           list[0]=list[0]+@jsonResult['results']          #Añadir la nueva lista de resultados.
           nextPageToken = @jsonResult['next_page_token']  #Obtener el next_page_token para la sgte pagina.
-
+        else
+          #Hacer un manejo de error para devolver error.
+          render json: response.msg, status: :unprocessable_entity
         end
       end
       
-      list2 = bubble_sort(list[0])    #Ordenar por rating.
+      list = bubble_sort(list[0])    #Ordenar por rating.
+      @list2 = list.first(10)
       
-      render json: list2.first(10)    #Entregar los primeros 10 resultados.
-
+      render :show, status: :ok, location: @list2.to_json
+      #render json: list.first(10)    #Entregar los primeros 10 resultados.
+    else
+        #Hacer un manejo de error para devolver error.
+        render json: response.msg, status: :unprocessable_entity
     end
 
   end
@@ -133,6 +175,6 @@ class LocationController < ApplicationController
   end
 
   def locationOwner_params
-    params.require(:data).permit(:location,:type)
+    params.require(:data).permit(:address,:location,:type)
   end
 end

@@ -1,4 +1,4 @@
 Rails.application.routes.draw do
   post 'location/search'
-  post 'location/recommendByRating'
+  post 'location/recommendation'
 end

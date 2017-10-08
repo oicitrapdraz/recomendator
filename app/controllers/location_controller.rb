@@ -44,9 +44,10 @@ class LocationController < ApplicationController
 		end
   end
 
-  ## Función para recomendar basado en el rating
+  ## Función para recomendar basado en dos campos
+  ## {"rating": Por rating , "distance": Por distancia} 
 
-  def recommendByRating
+  def recommendation
 
     #Obtener latitud y longitud de una dirección
     if locationOwner_params[:address]
@@ -83,8 +84,11 @@ class LocationController < ApplicationController
 
     #URL que manda latitud,longitud y tag.
     #Obtener lugares cercanos a un radio definido.
-    uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
-    #uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{latitud},#{longitud}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+    if locationOwner_params[:recommend] == "distance"
+      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+    elsif locationOwner_params[:recommend] == "rating"      
+      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+    end
 
     request = Net::HTTP::Get.new(uri)
     request["X-Riot-Token"] = "RGAPI-ade1178e-06bd-48a2-90fc-1b1a5080ad3c"
@@ -114,7 +118,12 @@ class LocationController < ApplicationController
           
         #El tiempo para entregar un token y validarlo, no es rapido (no menos de 1.5 segundo).
         sleep 1.6
-        uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+        
+        if locationOwner_params[:recommend] == "distance"
+          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+        elsif locationOwner_params[:recommend] == "rating"      
+          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=AIzaSyDqBVFE2MRz8AERZoHM6jqsVZ2f7LMfN8g")
+        end
 
         request = Net::HTTP::Get.new(uri)
         request["X-Riot-Token"] = "RGAPI-ade1178e-06bd-48a2-90fc-1b1a5080ad3c"
@@ -137,12 +146,21 @@ class LocationController < ApplicationController
           render json: response.msg, status: :unprocessable_entity
         end
       end
+
+      #Ordenar por
+      # {
+      #  "rating": Ordenar por rating
+      #  "distance": Ordenar por distancia
+      # }
+      if locationOwner_params[:recommend] == "rating"
+        list = bubble_sort(list[0])
+        @list2 = list.first(10)
+      elsif locationOwner_params[:recommend] == "distance"
+        @list2 = list[0].first(10)
+      end
       
-      list = bubble_sort(list[0])    #Ordenar por rating.
-      @list2 = list.first(10)
-      
+      #Entregar los primeros 10 resultados.
       render :show, status: :ok, location: @list2.to_json
-      #render json: list.first(10)    #Entregar los primeros 10 resultados.
     else
         #Hacer un manejo de error para devolver error.
         render json: response.msg, status: :unprocessable_entity
@@ -175,6 +193,6 @@ class LocationController < ApplicationController
   end
 
   def locationOwner_params
-    params.require(:data).permit(:address,:location,:type)
+    params.require(:data).permit(:address,:location,:type,:recommend)
   end
 end

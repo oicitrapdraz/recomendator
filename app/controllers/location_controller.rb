@@ -106,11 +106,7 @@ class LocationController < ApplicationController
 
       # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
 
-      while nextPageToken do        
-          
-        # El tiempo para entregar un token y validarlo, no es rapido (no menos de 1.5 segundo)
-
-        sleep 1.6
+      while nextPageToken do
         
         if locationOwner_params[:recommend] == "distance"
           uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
@@ -140,7 +136,7 @@ class LocationController < ApplicationController
       if locationOwner_params[:recommend] == "rating"
         result = list.sort_by {|obj| -obj["rating"].to_f }.first(10)
       elsif locationOwner_params[:recommend] == "distance"
-        reslt = list.first(10)
+        result = list.first(10)
       end
       
       render json: result

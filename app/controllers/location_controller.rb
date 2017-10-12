@@ -82,7 +82,7 @@ class LocationController < ApplicationController
     if locationOwner_params[:recommend] == "distance"
       uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
     elsif locationOwner_params[:recommend] == "rating"      
-      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
+      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
     end
 
     request = Net::HTTP::Get.new(uri)
@@ -111,7 +111,7 @@ class LocationController < ApplicationController
         if locationOwner_params[:recommend] == "distance"
           uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
         elsif locationOwner_params[:recommend] == "rating"      
-          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=500&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
         end
 
         request = Net::HTTP::Get.new(uri)
@@ -153,7 +153,7 @@ class LocationController < ApplicationController
     end
 
     def locationOwner_params
-      params.require(:data).permit(:address, :location, :type, :recommend)
+      params.require(:data).permit(:address, :location, :type, :recommend, :radius)
     end
 
 end

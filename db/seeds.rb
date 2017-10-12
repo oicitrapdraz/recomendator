@@ -5,3 +5,7 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
+
+User.create(name: "Ricardo", email: "ricardo@gmail.com")
+
+Preference.create([{ type_of_place: "point_of_interest" }, { type_of_place: "museum" }, { type_of_place: "movie_theater" }, { type_of_place: "zoo" }])

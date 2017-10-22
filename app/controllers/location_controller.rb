@@ -51,10 +51,12 @@ class LocationController < ApplicationController
   #     "address":
   #     "type":
   #     "recommend":
+  #     "radius":
   #   }
   # }
 
-  def recommendation
+  def recommendation    
+
     if locationOwner_params[:address]
       uri = URI.parse("https://maps.googleapis.com/maps/api/geocode/json?address=#{locationOwner_params[:address]}&key=#{G_API_KEY}")
 
@@ -69,6 +71,7 @@ class LocationController < ApplicationController
       end
 
       if response.code == "200"
+
         jsonQuery = JSON.parse(response.body)
 
         location = jsonQuery['results'][0]['geometry']['location']['lat'].to_s + "," + jsonQuery['results'][0]['geometry']['location']['lng'].to_s
@@ -79,44 +82,23 @@ class LocationController < ApplicationController
       location = locationOwner_params[:location]
     end
 
-    if locationOwner_params[:recommend] == "distance"
-      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
-    elsif locationOwner_params[:recommend] == "rating"      
-      uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
-    end
+    list=[]
 
-    request = Net::HTTP::Get.new(uri)
+    ##Para multiples tipos
+    if locationOwner_params[:type].include? ","
 
-    req_options = {
-      use_ssl: uri.scheme == "https",
-    }
-
-    response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
-      http.request(request)
-    end
-
-    if response.code == "200"
+      categories = locationOwner_params[:type].split(',')
       
-      jsonResult = JSON.parse(response.body)
-
-      # Obtener el token para sacar la sgte pagina de resultados y guardamos los resultados en una lista
-
-      nextPageToken = jsonResult['next_page_token']
-      list = jsonResult['results']
-
-      # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
-
-      while nextPageToken do
-        
+      for category in categories
         if locationOwner_params[:recommend] == "distance"
-          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
-        elsif locationOwner_params[:recommend] == "rating"      
-          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{category}&key=#{G_API_KEY}")               
+        elsif locationOwner_params[:recommend] == "rating"
+          uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{category}&key=#{G_API_KEY}")      
         end
 
         request = Net::HTTP::Get.new(uri)
 
-        req_options = {
+        req_options = {  
           use_ssl: uri.scheme == "https",
         }
 
@@ -125,24 +107,121 @@ class LocationController < ApplicationController
         end
 
         if response.code == "200"
+
           jsonResult = JSON.parse(response.body)
-          list.concat jsonResult['results']
+
+        # Obtener el token para sacar la sgte pagina de resultados y guardamos los resultados en una lista
+
           nextPageToken = jsonResult['next_page_token']
+          listResult = jsonResult['results'].reject{ |e| !categories.all? { |item| e['types'].include?(item)}}
+
+        # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
+
+          while nextPageToken do
+
+            sleep 1.606   #debo comentarlo con los demás.
+
+            if locationOwner_params[:recommend] == "distance"
+              uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{category}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+            elsif locationOwner_params[:recommend] == "rating"
+              uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{category}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+            end
+
+            request = Net::HTTP::Get.new(uri)
+
+            req_options = {  
+              use_ssl: uri.scheme == "https",
+            }
+
+            response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+              http.request(request)
+            end
+
+            if response.code == "200"
+
+              jsonResult = JSON.parse(response.body)
+              listFilter = jsonResult['results'].reject{ |e| !categories.all? { |item| e['types'].include?(item)}}
+              listResult.concat listFilter
+              nextPageToken = jsonResult['next_page_token']
+
+            else
+              render json: response.msg
+            end
+          end
+          list.concat listResult
         else
           render json: response.msg
         end
       end
-
-      if locationOwner_params[:recommend] == "rating"
-        result = list.sort_by {|obj| -obj["rating"].to_f }.first(10)
-      elsif locationOwner_params[:recommend] == "distance"
-        result = list.first(10)
-      end
-      
-      render json: result
+    
+    ## Para un solo tipo
     else
-      render json: response.msg
+      if locationOwner_params[:recommend] == "distance"
+        uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
+      elsif locationOwner_params[:recommend] == "rating"      
+        uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&key=#{G_API_KEY}")
+      end
+
+      request = Net::HTTP::Get.new(uri)
+
+      req_options = {
+        use_ssl: uri.scheme == "https",
+      }
+
+      response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+        http.request(request)
+      end
+
+      if response.code == "200"
+      
+        jsonResult = JSON.parse(response.body)
+
+        # Obtener el token para sacar la sgte pagina de resultados y guardamos los resultados en una lista
+
+        nextPageToken = jsonResult['next_page_token']
+        list = jsonResult['results']
+
+        # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
+
+        while nextPageToken do
+
+          sleep 1.606        
+          if locationOwner_params[:recommend] == "distance"
+            uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+          elsif locationOwner_params[:recommend] == "rating"      
+            uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{locationOwner_params[:radius]}&type=#{locationOwner_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
+          end
+
+          request = Net::HTTP::Get.new(uri)
+
+          req_options = {
+            use_ssl: uri.scheme == "https",
+          }
+
+          response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+            http.request(request)
+          end
+
+          if response.code == "200"
+            jsonResult = JSON.parse(response.body)
+            list.concat jsonResult['results']
+            nextPageToken = jsonResult['next_page_token']
+          else
+            render json: response.msg
+          end
+        end
+      else
+       render json: response.msg
+      end 
     end
+
+    if locationOwner_params[:recommend] == "rating"
+      result = list.sort_by {|obj| -obj["rating"].to_f }.first(10)
+    elsif locationOwner_params[:recommend] == "distance"
+      result = list.first(10)
+    end
+
+    render json: result
 
   end
 

@@ -15,15 +15,20 @@ class UsersController < ApplicationController
   def login
     key = "TPSW_servidor"
     @user = User.find_by(email: credential_params[:email])
-    email = credential_params[:email]
-    pass = credential_params[:password]
-    logger.info(@user)
-    @user.password = AESCrypt.decrypt(@user.password, key)
-    if email==@user.email && pass == @user.password 
-      render :show, status: :ok, location: @user
+    if @user 
+      email = credential_params[:email]
+      pass = credential_params[:password]
+      #logger.info(@user)
+      @user.password = AESCrypt.decrypt(@user.password, key)
+      if email==@user.email && pass == @user.password 
+        render :show, status: :ok, location: @user
+      else
+        render json: @user.errors, status: :unprocessable_entity
+      end
     else
       render json: @user.errors, status: :unprocessable_entity
     end
+    
   end
 
   # GET /users/1

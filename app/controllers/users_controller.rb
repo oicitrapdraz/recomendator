@@ -1,5 +1,6 @@
 class UsersController < ApplicationController
   before_action :set_user, only: [:show, :update, :destroy]
+  #before_action :authenticate
 
   # GET /users
   # GET /users.json
@@ -8,6 +9,20 @@ class UsersController < ApplicationController
     password = "TPSW_servidor"
     @users.each do |user|
       user.password = AESCrypt.decrypt(user.password, password)
+    end
+  end
+
+  def login
+    key = "TPSW_servidor"
+    @user = User.find_by(email: credential_params[:email])
+    email = credential_params[:email]
+    pass = credential_params[:password]
+    logger.info(@user)
+    @user.password = AESCrypt.decrypt(@user.password, key)
+    if email==@user.email && pass == @user.password 
+      render :show, status: :ok, location: @user
+    else
+      render json: @user.errors, status: :unprocessable_entity
     end
   end
 
@@ -61,6 +76,27 @@ class UsersController < ApplicationController
     # Use callbacks to share common setup or constraints between actions.
     def set_user
       @user = User.find(params[:id])
+    end
+
+    #User Authentication
+    #def authenticate
+    #  key = "TPSW_servidor"
+    #  email = request.headers["email"]
+    #  pass = request.headers["password"]
+    #  authenticate_or_request_with_http_basic do |username,password|
+    #    @length=User.all
+    #    if @length.length > 0
+    #      @user = User.find_by(email: email)
+    #      if @user 
+    #        @user.password = AESCrypt.decrypt(@user.password, key)
+    #        email==@user.email && pass == @user.password 
+    #      end
+    #    end          
+      #end
+    #end
+
+    def credential_params
+      params.require(:user).permit(:email,:password)
     end
 
     # Never trust parameters from the scary internet, only allow the white list through.

@@ -5,8 +5,8 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
-
-User.create([{name: "Ricardo", android_id: "5fg8", email: "ricardo@gmail.com"}, {name: "Ruben", android_id: "5fg7", email: "ruben@gmail.com"}])
+key = "TPSW_servidor"
+User.create([{name: "Ricardo", password: AESCrypt.encrypt("hola123", key), android_id: "5fg8", email: "ricardo@gmail.com"}, {name: "Ruben",password: AESCrypt.encrypt("hola1234", key) ,android_id: "5fg7", email: "ruben@gmail.com"}])
 
 Preference.create([{ type_of_place: "point_of_interest" }, { type_of_place: "museum" }, { type_of_place: "movie_theater" }, { type_of_place: "zoo" }])
 

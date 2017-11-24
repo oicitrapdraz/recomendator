@@ -20,13 +20,14 @@ class UsersController < ApplicationController
       pass = credential_params[:password]
       #logger.info(@user)
       @user.password = AESCrypt.decrypt(@user.password, key)
-      if email==@user.email && pass == @user.password 
-        render :show, status: :ok, location: @user
+      if email==@user.email && pass == @user.password
+        @user.password = AESCrypt.encrypt(@user.password, key) 
+        render json: @user, status: :ok
       else
         render json: @user.errors, status: :unprocessable_entity
       end
     else
-      render json: @user.errors, status: :unprocessable_entity
+      render json: @user, status: :unprocessable_entity
     end
     
   end
@@ -55,7 +56,7 @@ class UsersController < ApplicationController
     		@user.preferences << pref unless @user.preferences.include?(pref)
     	
     	}
-    	render :show, status: :created, location: @user
+    	render json: @user, status: :created 
     else
       render json: @user.errors, status: :unprocessable_entity
     end
@@ -65,7 +66,7 @@ class UsersController < ApplicationController
   # PATCH/PUT /users/1.json
   def update
     if @user.update(user_params)
-      render :show, status: :ok, location: @user
+      render json: @user, status: :ok
     else
       render json: @user.errors, status: :unprocessable_entity
     end

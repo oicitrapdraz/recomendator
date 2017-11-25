@@ -17,12 +17,11 @@ class UsersController < ApplicationController
     @user = User.find_by(email: credential_params[:email])
     if @user 
       email = credential_params[:email]
-      pass = credential_params[:password]
-      #logger.info(@user)
+      pass = credential_params[:password]      
       @user.password = AESCrypt.decrypt(@user.password, key)
       if email==@user.email && pass == @user.password
         @user.password = AESCrypt.encrypt(@user.password, key) 
-        render json: @user, status: :ok
+        render json: @user.to_json(include: :preferences), status: :ok
       else
         render json: @user.errors, status: :unprocessable_entity
       end
@@ -45,18 +44,16 @@ class UsersController < ApplicationController
     password = "TPSW_servidor"
     @user.password = AESCrypt.encrypt(@user.password, password)
     #logger.info(@user)
-    #logger.info(types)
     if @user.save
     	types.each { |type|
     		pref = Preference.find_by(type_of_place: type)
-    		logger.info(pref)
     		if !pref
     			pref = Preference.create([{type_of_place: type}])   			
     		end
     		@user.preferences << pref unless @user.preferences.include?(pref)
     	
     	}
-    	render json: @user, status: :created 
+      render json: @user.to_json(include: :preferences), status: :created
     else
       render json: @user.errors, status: :unprocessable_entity
     end
@@ -66,7 +63,7 @@ class UsersController < ApplicationController
   # PATCH/PUT /users/1.json
   def update
     if @user.update(user_params)
-      render json: @user, status: :ok
+      render json: @user.to_json(include: :preferences), status: :ok
     else
       render json: @user.errors, status: :unprocessable_entity
     end

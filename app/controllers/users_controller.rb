@@ -6,10 +6,8 @@ class UsersController < ApplicationController
   # GET /users.json
   def index
     @users = User.all
-    password = "TPSW_servidor"
-    @users.each do |user|
-      user.password = AESCrypt.decrypt(user.password, password)
-    end
+
+    render json: @users.to_json(include: :preferences), status: :ok
   end
 
   def login
@@ -34,6 +32,7 @@ class UsersController < ApplicationController
   # GET /users/1
   # GET /users/1.json
   def show
+    render json: @user.to_json(include: :preferences), status: :ok
   end
 
   # POST /users

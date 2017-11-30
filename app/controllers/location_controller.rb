@@ -1,6 +1,7 @@
 require 'net/http'
 require 'uri'
 require 'set'
+require 'json'
 
 class LocationController < ApplicationController
 
@@ -266,6 +267,83 @@ class LocationController < ApplicationController
       render json: { status: :internal_server_error }
     end
   end
+
+  def recommendation_by_collaborative_filtering
+    usuarios = User.where.not(id: params[:id])
+    lista = {}
+    
+    usuarios.each { |usuario|
+      foo = {}
+      ratings = Rating.where(user_id: usuario.id)
+      ratings.each { |rat|
+        place = Place.find(rat.place_id)
+        foo[place.name] = rat.rating      
+      }
+      lista[usuario.name] = foo
+      
+    }
+    logger.info(lista)
+    
+    
+    #user_data = {
+    #  "rob" => {
+    #    "RecreoTV" => 5,
+    #    "Museo del Piano" => 4,
+    #    "Sushi Express" => 3
+    #  },
+    #  "bob" => {
+    #    "RecreoTV" => 2,
+    #    "Museo USM" => 1,
+    #    "Sushi Express" => 4
+    #  },
+    #  "tod" => {
+    #    "RecreoTV" => 3,
+    #    "Museo del Piano" => 3,
+    #    "Sushi Express" => 5,
+    #    "Museo USM" => 3
+    #  },
+    #  "dod" => {
+    #    "RecreoTV" => 2,
+    #    "Museo del Piano" => 1,
+    #    "Sushi Express" => 2,
+    #    "Nony's" => 5
+    #  },
+    #  "fod" => {
+    #    "Museo del Piano" => 1,
+    #    "Sushi Express" => 2,
+    #    "Nony's" => 3
+    #  }
+    #}
+    foo = {}
+    user = User.find(params[:id])
+    ratUser = Rating.where(user_id: user.id)
+    ratUser.each { |ratUser|
+      place = Place.find(ratUser.place_id)
+      foo[place.name] = ratUser.rating      
+    }
+    #logger.info(foo)
+    
+    slope_one = SlopeOne.new
+    slope_one.insert(user_data)
+    #slope_one.insert(lista)
+    #recom = eval(slope_one.predict({"Sushi Express" => 3, "Museo USM" => 5}).inspect)
+    #recom.each {|key,value|
+    #  logger.info(key)
+    #  if value > 5
+    #    value = 5
+    #  end  
+    #}
+    recommend = eval(slope_one.predict(foo).inspect)
+    recommend.each {|key,value|
+      if value > 5
+        value = 5
+      end  
+    }
+    
+    #render json: recom, status: :ok
+    render json: recommend, status: :ok
+  end
+
 
   private
 

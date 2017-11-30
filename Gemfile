@@ -20,6 +20,9 @@ gem 'jbuilder'
 gem 'aescrypt'
 # gem 'bcrypt', '~> 3.1.7'
 
+#Gem Slope One collaborative filtering/recommendation algorithm.
+gem 'slope_one'
+
 # Use Capistrano for deployment
 # gem 'capistrano-rails', group: :development
 

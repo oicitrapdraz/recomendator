@@ -333,7 +333,7 @@ class LocationController < ApplicationController
 
     recommended_places = recommended_places.uniq - Rating.where(user_id: user.id).pluck(:place_id)
 
-    render json: recommended_places, status: :ok
+    render json: Place.find(recommended_places), status: :ok
   end
 
 

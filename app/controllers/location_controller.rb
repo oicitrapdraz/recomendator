@@ -2,6 +2,7 @@ require 'net/http'
 require 'uri'
 require 'set'
 require 'json'
+require 'ruby-esvidi'
 
 class LocationController < ApplicationController
 
@@ -269,79 +270,70 @@ class LocationController < ApplicationController
   end
 
   def recommendation_by_collaborative_filtering
-    usuarios = User.where.not(id: params[:id])
-    lista = {}
-    
-    usuarios.each { |usuario|
-      foo = {}
-      ratings = Rating.where(user_id: usuario.id)
-      ratings.each { |rat|
-        place = Place.find(rat.place_id)
-        foo[place.name] = rat.rating      
-      }
-      lista[usuario.name] = foo
-      
-    }
-    logger.info(lista)
-    
-    
-    #user_data = {
-    #  "rob" => {
-    #    "RecreoTV" => 5,
-    #    "Museo del Piano" => 4,
-    #    "Sushi Express" => 3
-    #  },
-    #  "bob" => {
-    #    "RecreoTV" => 2,
-    #    "Museo USM" => 1,
-    #    "Sushi Express" => 4
-    #  },
-    #  "tod" => {
-    #    "RecreoTV" => 3,
-    #    "Museo del Piano" => 3,
-    #    "Sushi Express" => 5,
-    #    "Museo USM" => 3
-    #  },
-    #  "dod" => {
-    #    "RecreoTV" => 2,
-    #    "Museo del Piano" => 1,
-    #    "Sushi Express" => 2,
-    #    "Nony's" => 5
-    #  },
-    #  "fod" => {
-    #    "Museo del Piano" => 1,
-    #    "Sushi Express" => 2,
-    #    "Nony's" => 3
-    #  }
-    #}
-    foo = {}
     user = User.find(params[:id])
-    ratUser = Rating.where(user_id: user.id)
-    ratUser.each { |ratUser|
-      place = Place.find(ratUser.place_id)
-      foo[place.name] = ratUser.rating      
+
+    num_users = User.count - 1
+    num_places = Place.count
+
+    map_user_col = Hash.new()   # Para mapear user_id a columna
+    map_place_row = Hash.new()  # Para mapear place_id a fila
+
+    user_ids = User.where.not(id: user.id).ids
+    place_ids = Place.ids
+
+    user_ids.each_with_index { |user_id, i|
+      map_user_col[user_id] = i
     }
-    #logger.info(foo)
-    
-    slope_one = SlopeOne.new
-    slope_one.insert(user_data)
-    #slope_one.insert(lista)
-    #recom = eval(slope_one.predict({"Sushi Express" => 3, "Museo USM" => 5}).inspect)
-    #recom.each {|key,value|
-    #  logger.info(key)
-    #  if value > 5
-    #    value = 5
-    #  end  
-    #}
-    recommend = eval(slope_one.predict(foo).inspect)
-    recommend.each {|key,value|
-      if value > 5
-        value = 5
-      end  
+
+    place_ids.each_with_index { |place_id, i|
+      map_place_row[place_id] = i
     }
-    
-    #render json: recom, status: :ok
-    render json: recommend, status: :ok
+
+    matrix = Array.new(num_places) { Array.new(num_users, 0) }
+
+    ratings = Rating.where.not(user_id: user.id)
+
+    ratings.each do |rating|
+      matrix[map_place_row[rating.place_id]][map_user_col[rating.user_id]] = rating.rating
+    end
+
+    m = SVDMatrix.new(num_places, num_users)
+
+    matrix.each_with_index do |row, i|
+      m.set_row(i, row)
+    end
+
+    lsa = LSA.new(m)
+
+    user_places = Array.new(num_places, 0)
+
+    ratings_from_user = Rating.where(user_id: user.id)
+
+    ratings_from_user.each_with_index do |rating,|
+      user_places[map_place_row[rating.place_id]] = rating.rating
+    end
+
+    similarity = lsa.classify_vector(user_places)
+
+    similar_users = similarity.delete_if { |k, sim| sim < 0.5 }.sort{ |a| -a[1] }
+
+    similar_users_ids = []   # Aqui tendremos una lista de los IDs de los usuarios similares
+
+    similar_users.each do |u|
+      similar_users_ids.push(map_user_col.key(u[0]))
+    end
+
+    p similar_users_ids
+
+    recommended_places = []
+
+    similar_users_ids.each do |u_id|
+      recommended_places.concat Rating.where(user_id: u_id).where(rating: 4..5).order('rating DESC').pluck(:place_id)
+    end
+
+    recommended_places = recommended_places.uniq - Rating.where(user_id: user.id).pluck(:place_id)
+
+    render json: recommended_places, status: :ok
   end
 
 

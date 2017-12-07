@@ -32,14 +32,6 @@ ActiveRecord::Schema.define(version: 20171125170735) do
     t.index ["preference_id"], name: "index_places_preferences_on_preference_id"
   end
 
-  create_table "places_users", id: false, force: :cascade do |t|
-    t.bigint "place_id"
-    t.bigint "user_id"
-    t.integer "rating"
-    t.index ["place_id"], name: "index_places_users_on_place_id"
-    t.index ["user_id"], name: "index_places_users_on_user_id"
-  end
-
   create_table "preferences", force: :cascade do |t|
     t.string "type_of_place"
     t.datetime "created_at", null: false

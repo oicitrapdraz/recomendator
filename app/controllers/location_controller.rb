@@ -337,7 +337,43 @@ class LocationController < ApplicationController
   end
 
 
+  # Endpoint para registrar un rating a un lugar, se reciben parametros JSON con el formato:
+
+  # {
+  #   "data": {
+  #     "user_id":
+  #     "place_id":
+  #     "rating":
+  #   }
+  # }
+
+  def rating_place
+
+    ##recibe el place_id, busca el lugar.
+    ##registra el rating en base al place_id de la BD (no de google) y user_id.
+    @rating = Rating.new
+    @place = Place.find_by(google_id: rating_params[:place_id])
+    if @place
+      @rating.place_id = @place.id
+      @rating.user_id = rating_params[:user_id]
+      @rating.rating = rating_params[:rating].to_i
+      
+      if @rating.save
+        render json: @rating.to_json, status: :ok
+      else
+        render json: @rating.errors, status: :unprocessable_entity
+      end
+    else
+      render json: @place, status: :unprocessable_entity
+    end
+  end
+
+
   private
+
+  def rating_params
+    params.require(:data).permit(:place_id,:user_id,:rating)
+  end
 
   def search_params
     params.require(:location).permit(:address)

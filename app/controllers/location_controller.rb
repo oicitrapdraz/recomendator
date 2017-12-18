@@ -373,18 +373,13 @@ class LocationController < ApplicationController
 
   def rating_show
 
-    ##recibe el place_id, busca el lugar.
-    ##registra el rating en base al place_id de la BD (no de google) y user_id.
-    @rating = Rating.where(user_id: params[:id])
-    render json: @rating, status: :ok
+    @rating = Rating.where(user_id: params[:id]).joins(:place).select("ratings.id,
+      ratings.user_id,ratings.rating,places.google_id")
+    render json: @rating.to_json, status: :ok
   end
 
 
   private
-
-  def rating_search_params
-    params.require(:data).permit(:place_id)
-  end
 
   def rating_params
     params.require(:data).permit(:place_id,:user_id,:rating)

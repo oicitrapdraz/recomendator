@@ -184,8 +184,6 @@ User.create([
   {android_id: "38f8a5388d1d77da8dad86c4ee503b6b", name: "Joannes Eglese", password: AESCrypt.encrypt("pcCnyPLZ3lf", key), email: "jeglese2q@rediff.com"},
   {android_id: "fd5038df1ee332f376785eeaeca423c4", name: "Nichole Redmell", password: AESCrypt.encrypt("tLCqpJJd", key), email: "nredmell2r@miitbeian.gov.cn"}])
 
-
-
 Rating.create([
   {user_id:0, place_id: 0, rating: 1},
   {user_id:0, place_id: 1, rating: 2},

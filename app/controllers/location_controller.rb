@@ -406,12 +406,6 @@ class LocationController < ApplicationController
           render json: place.errors, status: :unprocessable_entity
         end
 
-        #logger.info(jsonQuery['result']['vicinity'])
-        #logger.info(jsonQuery['result']['icon'])
-        #logger.info(location)
-
-
-        #location = jsonQuery['results'][0]['geometry']['location']['lat'].to_s + "," + jsonQuery['results'][0]['geometry']['location']['lng'].to_s
       else
         render json: { status: :internal_server_error }
       end
@@ -421,6 +415,62 @@ class LocationController < ApplicationController
 
       #render json: @place, status: :unprocessable_entity
     end
+  end
+
+  def recommendation_by_collaborative_filtering_slope
+    usuarios = User.where.not(id: params[:id])
+    lista = {}
+    
+    usuarios.each { |usuario|
+      foo = {}
+      ratings = Rating.where(user_id: usuario.id)
+      ratings.each { |rat|
+
+        place = Place.find(rat.place_id)
+        foo[place.name] = rat.rating      
+      }
+
+      lista[usuario.name] = foo
+      
+    }
+    logger.info(lista)
+    
+    
+    foo = {}
+    user = User.find(params[:id])
+    ratUser = Rating.where(user_id: user.id)
+
+    ratUser.each { |ratUser|
+      place = Place.find(ratUser.place_id)
+      foo[place.name] = ratUser.rating      
+    }
+    resultados = []
+    fooMiamigo = {}
+    slope_one = SlopeOne.new
+    slope_one.insert(lista)
+    i = 0
+    recommend = eval(slope_one.predict(foo).inspect)
+    recommend.each {|key,value|
+      logger.info(key)
+      logger.info(value)
+      lugares = Place.find_by(name: key)
+      value = value.round
+      logger.info(value)
+      if value > 5
+        value = 5
+      end 
+      recommend[key] = value
+      fooMiamigo['name'] = key
+      fooMiamigo['place_id'] = lugares.google_id
+      fooMiamigo['rating'] = value
+      resultados[i] = fooMiamigo
+      fooMiamigo = {}
+      i = i +1
+    }
+    logger.info(fooMiamigo)
+    
+    #render json: recom, status: :ok
+    render json: resultados, status: :ok
   end
 
   # Endpoint para mostrar el rating hecho a un lugar, por un usuario especifico se reciben parametros JSON con el formato:

@@ -25,6 +25,8 @@ class User < ApplicationRecord
       where("place_id NOT IN (?)", rating_place_ids).\
       map {|x| {"name": x.place.name,
                 "place_id": x.place.google_id,
+                "latitude": x.place.location.split(" ")[0],
+                "longitude": x.place.location.split(" ")[1],
                 "rating": x.rating}}
   end
 

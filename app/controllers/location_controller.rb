@@ -355,18 +355,71 @@ class LocationController < ApplicationController
     ##registra el rating en base al place_id de la BD (no de google) y user_id.
     @rating = Rating.new
     @place = Place.find_by(google_id: rating_params[:place_id])
+    
     if @place
+      #logger.info("hay algo")
+      #logger.info(@place.to_json)      
       @rating.place_id = @place.id
       @rating.user_id = rating_params[:user_id]
       @rating.rating = rating_params[:rating].to_i
-      
       if @rating.save
         render json: @rating.to_json, status: :ok
       else
         render json: @rating.errors, status: :unprocessable_entity
       end
     else
-      render json: @place, status: :unprocessable_entity
+
+      uri = URI.parse("https://maps.googleapis.com/maps/api/place/details/json?placeid=#{rating_params[:place_id]}&key=#{G_API_KEY}")
+
+      request = Net::HTTP::Get.new(uri)
+
+      req_options = {  
+        use_ssl: uri.scheme == "https",
+      }
+
+      response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+        http.request(request)
+      end
+
+      if response.code == "200"
+        jsonQuery = JSON.parse(response.body)
+
+        place = Place.new
+        place.google_id = jsonQuery['result']['place_id']
+        place.name = jsonQuery['result']['name']
+        place.vicinity = jsonQuery['result']['vicinity']
+        place.icon = jsonQuery['result']['icon']   
+        location = jsonQuery['result']['geometry']['location']['lat'].to_s + "," + jsonQuery['result']['geometry']['location']['lng'].to_s
+        place.location = location
+
+
+        if place.save
+          @rating.place_id = place.id
+          @rating.user_id = rating_params[:user_id]
+          @rating.rating = rating_params[:rating].to_i
+          if @rating.save
+            render json: @rating.to_json, status: :ok
+          else
+            render json: @rating.errors, status: :unprocessable_entity
+          end
+        else
+          render json: place.errors, status: :unprocessable_entity
+        end
+
+        #logger.info(jsonQuery['result']['vicinity'])
+        #logger.info(jsonQuery['result']['icon'])
+        #logger.info(location)
+
+
+        #location = jsonQuery['results'][0]['geometry']['location']['lat'].to_s + "," + jsonQuery['results'][0]['geometry']['location']['lng'].to_s
+      else
+        render json: { status: :internal_server_error }
+      end
+
+
+
+
+      #render json: @place, status: :unprocessable_entity
     end
   end
 

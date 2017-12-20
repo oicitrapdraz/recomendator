@@ -21,13 +21,14 @@ class User < ApplicationRecord
       #v1.size == 0 ? Float::INFINITY : (v1-v2).norm # mean squared error
       v1.size == 0 ? 0 : Math.cos(v1.angle_with(v2)) # cosine distance
     end
-    most_similar_user.ratings.\
+    ratingEstimates = most_similar_user.ratings.\
       where("place_id NOT IN (?)", rating_place_ids).\
       map {|x| {"name": x.place.name,
                 "place_id": x.place.google_id,
                 "latitude": x.place.location.split(" ")[0],
                 "longitude": x.place.location.split(" ")[1],
                 "rating": x.rating}}
+    return ratingEstimates
   end
 
 end

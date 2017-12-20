@@ -114,7 +114,7 @@ class LocationController < ApplicationController
         # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
 
         while nextPageToken do
-          sleep(1.606)
+          sleep(1.61)
 
           if recommendation_params[:recommend] == "distance"
             uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&rankby=distance&type=#{recommendation_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
@@ -202,6 +202,7 @@ class LocationController < ApplicationController
       end
 
       result = []
+      list={}
 
       types.each { |type|
         uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{recommendation_by_preferences_params[:radius]}&type=#{type}&key=#{G_API_KEY}")
@@ -217,6 +218,7 @@ class LocationController < ApplicationController
         end
 
         if response.code == "200"
+          logger.info(response.body)
 
           jsonResult = JSON.parse(response.body)
 
@@ -228,7 +230,7 @@ class LocationController < ApplicationController
           # Google solo muestra 20 resultados minimos y 60 maximos, para acceder a los prox 20 resultados, se utiliza next_page_token
 
           while nextPageToken do
-            sleep(1.606)
+            sleep(1.61)
 
             uri = URI.parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=#{location}&radius=#{recommendation_by_preferences_params[:radius]}&type=#{recommendation_by_preferences_params[:type]}&pagetoken=#{nextPageToken}&key=#{G_API_KEY}")
 
@@ -257,9 +259,9 @@ class LocationController < ApplicationController
         end
       }
 
-      result = result.reject{ |r|
-        !(types - r['types']).empty?
-      }
+      #result = result.reject{ |r|
+      #  !(types - r['types']).empty?
+      #}
 
       result = result.sort_by {|obj| -obj['rating'].to_f }.first(10)
 

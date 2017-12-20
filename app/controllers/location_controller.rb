@@ -473,6 +473,12 @@ class LocationController < ApplicationController
     render json: resultados, status: :ok
   end
 
+  def recommendation_by_collaborative_filtering_with_svd
+    user = User.find(params[:id])
+    ratingEstimate = user.get_place_recommendations
+    render json: ratingEstimate, status: :ok
+  end
+
   # Endpoint para mostrar el rating hecho a un lugar, por un usuario especifico se reciben parametros JSON con el formato:
 
 
